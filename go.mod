@@ -3,12 +3,9 @@ module github.com/cloud-native-taiwan/controller101
 go 1.12
 
 require (
-	github.com/gophercloud/gophercloud v0.4.0
-	k8s.io/api v0.0.0-20191005115622-2e41325d9e4b
 	k8s.io/apimachinery v0.0.0-20191005115455-e71eb83a557c
-	k8s.io/client-go v0.0.0-20191005115821-b1fd78950135
+	k8s.io/client-go v0.0.0-20191005115821-b1fd78950135 // indirect
 	k8s.io/code-generator v0.0.0-20191003035328-700b1226c0bd
-	k8s.io/klog v1.0.0
 )
 
 replace (

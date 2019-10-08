@@ -18,7 +18,7 @@ limitations under the License.
 
 // This package imports things required by build scripts, to force `go mod` to see them as dependencies
 // See https://github.com/golang/go/issues/25922
-// +build tools
+
 package tools
 
 import (

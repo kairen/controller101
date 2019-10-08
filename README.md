@@ -4,7 +4,7 @@ This repository implements a simple controller for watching `VM` resources as de
 This example will show you how to perform basic operations such as:
 
 * [x] How to create a custom resource of type `VM` using CRD API.
-* [ ] How to operate instances of type `VM`.
+* [x] How to operate instances of type `VM`.
 * [ ] How to implement a controller for handling an instance of type `VM` to move the current state towards the desired state.
 * [ ] How to use Finalizer on instances of type `VM`.
 * [ ] How to implement LeaseLock for multiple controllers.
@@ -21,4 +21,12 @@ $ make
 ```
 
 ## Running
-(TBD)
+Run the following command to debug:
+
+```sh
+$ minikube start --kubernetes-version=v1.15.4 
+$ go run cmd/main.go --kubeconfig=$HOME/.kube/config -v=2 --logtostderr
+I1008 15:38:30.350446   52017 controller.go:68] Starting the controller
+I1008 15:38:30.350543   52017 controller.go:69] Waiting for the informer caches to sync
+I1008 15:38:30.454799   52017 controller.go:77] Started workers
+```

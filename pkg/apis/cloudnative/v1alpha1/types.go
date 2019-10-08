@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,15 +32,9 @@ type VirtualMachine struct {
 	Status VirtualMachineStatus `json:"status"`
 }
 
-type VirtualMachineResource struct {
-	CPU      int32 `json:"cpu"`
-	Memory   int32 `json:"memory"`
-	RootDisk int32 `json:"rootDisk"`
-}
-
 type VirtualMachineSpec struct {
-	Action   string                 `json:"action"`
-	Resource VirtualMachineResource `json:"resource"`
+	Action   string              `json:"action"`
+	Resource corev1.ResourceList `json:"resource"`
 }
 
 type VirtualMachinePhase string

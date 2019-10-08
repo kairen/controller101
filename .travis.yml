@@ -1,0 +1,13 @@
+language: go
+os: linux
+go:
+- 1.12.x
+go_import_path: github.com/cloud-native-taiwan/controller101
+env:
+- GO111MODULE=on
+script:
+- make test
+- make verify-codegen
+- make
+after_success:
+- bash <(curl -s https://codecov.io/bash)

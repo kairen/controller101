@@ -5,7 +5,7 @@ This example will show you how to perform basic operations such as:
 
 * [x] How to create a custom resource of type `VM` using CRD API.
 * [x] How to operate instances of type `VM`.
-* [ ] How to implement a controller for handling an instance of type `VM` to move the current state towards the desired state.
+* [x] How to implement a controller for handling an instance of type `VM` to move the current state towards the desired state.
 * [ ] How to use Finalizer on instances of type `VM`.
 * [ ] How to implement LeaseLock for multiple controllers.
 * [ ] How to expose metrics of the controller.

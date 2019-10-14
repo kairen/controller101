@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/cloud-native-taiwan/controller101/pkg/controller"
+	"github.com/cloud-native-taiwan/controller101/pkg/driver"
 	cloudnative "github.com/cloud-native-taiwan/controller101/pkg/generated/clientset/versioned"
 	cloudnativeinformer "github.com/cloud-native-taiwan/controller101/pkg/generated/informers/externalversions"
 	"github.com/cloud-native-taiwan/controller101/pkg/version"
@@ -49,12 +50,14 @@ var (
 	id                 string
 	leaseLockName      string
 	leaseLockNamespace string
+	driverName         string
 )
 
 func parseFlags() {
 	flag.StringVarP(&kubeconfig, "kubeconfig", "", "", "Absolute path to the kubeconfig file.")
 	flag.IntVarP(&threads, "threads", "", 2, "Number of worker threads used by the controller.")
 	flag.StringVarP(&id, "holder-identity", "", os.Getenv("POD_NAME"), "the holder identity name")
+	flag.StringVarP(&driverName, "vm-driver", "", "", "Driver is one of: [fake docker].")
 	flag.BoolVarP(&leaderElect, "leader-elect", "", true, "Start a leader election client and gain leadership before executing the main loop. ")
 	flag.StringVar(&leaseLockName, "lease-lock-name", "controller101", "the lease lock resource name")
 	flag.StringVar(&leaseLockNamespace, "lease-lock-namespace", "", "the lease lock resource namespace")
@@ -98,8 +101,20 @@ func main() {
 		klog.Fatalf("Error to build cloudnative clientset: %s", err.Error())
 	}
 
+	var vmDriver driver.Interface
+	switch driverName {
+	case "docker":
+		docker, err := driver.NewDockerDriver()
+		if err != nil {
+			klog.Fatalf("Error to new docker driver: %s", err.Error())
+		}
+		vmDriver = docker
+	default:
+		klog.Fatalf("The driver '%s' is not supported.", driverName)
+	}
+
 	informer := cloudnativeinformer.NewSharedInformerFactory(clientset, defaultSyncTime)
-	controller := controller.New(clientset, informer)
+	controller := controller.New(clientset, informer, vmDriver)
 	ctx, cancel := context.WithCancel(context.Background())
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)

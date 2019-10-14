@@ -11,4 +11,18 @@ spec:
     plural: virtualmachines
     shortNames:
     - vm
+    - vms
   scope: Namespaced
+  additionalPrinterColumns:
+  - name: Status
+    type: string
+    JSONPath: .status.phase
+  - name: CPU
+    type: number
+    JSONPath: .status.server.usage.cpu
+  - name: Memory
+    type: number
+    JSONPath: .status.server.usage.memory
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp

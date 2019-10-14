@@ -3,8 +3,6 @@ kind: VirtualMachine
 metadata:
   name: test-vm
 spec:
-  action: active
   resource:
     cpu: 1
     memory: 4G
-    rootDisk: 40G

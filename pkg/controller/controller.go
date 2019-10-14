@@ -18,15 +18,17 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
+	v1alpha1 "github.com/cloud-native-taiwan/controller101/pkg/apis/cloudnative/v1alpha1"
+	"github.com/cloud-native-taiwan/controller101/pkg/driver"
 	cloudnative "github.com/cloud-native-taiwan/controller101/pkg/generated/clientset/versioned"
 	cloudnativeinformer "github.com/cloud-native-taiwan/controller101/pkg/generated/informers/externalversions"
 	listerv1alpha1 "github.com/cloud-native-taiwan/controller101/pkg/generated/listers/cloudnative/v1alpha1"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -36,6 +38,7 @@ import (
 
 const (
 	resouceName = "VirtualMachine"
+	periodSec   = 20
 )
 
 type Controller struct {
@@ -44,13 +47,15 @@ type Controller struct {
 	lister    listerv1alpha1.VirtualMachineLister
 	synced    cache.InformerSynced
 	queue     workqueue.RateLimitingInterface
+	vm        driver.Interface
 }
 
-func New(clientset cloudnative.Interface, informer cloudnativeinformer.SharedInformerFactory) *Controller {
+func New(clientset cloudnative.Interface, informer cloudnativeinformer.SharedInformerFactory, vm driver.Interface) *Controller {
 	vmInformer := informer.Cloudnative().V1alpha1().VirtualMachines()
 	controller := &Controller{
 		clientset: clientset,
 		informer:  informer,
+		vm:        vm,
 		lister:    vmInformer.Lister(),
 		synced:    vmInformer.Informer().HasSynced,
 		queue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), resouceName),
@@ -61,6 +66,7 @@ func New(clientset cloudnative.Interface, informer cloudnativeinformer.SharedInf
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueue(new)
 		},
+		DeleteFunc: controller.deleteObject,
 	})
 	return controller
 }
@@ -148,11 +154,105 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	data, err := json.Marshal(vm)
+	switch vm.Status.Phase {
+	case v1alpha1.VirtualMachineNone:
+		if err := c.makePendingPhase(vm); err != nil {
+			return err
+		}
+	case v1alpha1.VirtualMachinePending, v1alpha1.VirtualMachineFailed:
+		if err := c.createServer(vm); err != nil {
+			return err
+		}
+	case v1alpha1.VirtualMachineActive:
+		if err := c.updateUsage(vm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Controller) deleteObject(obj interface{}) {
+	vm := obj.(*v1alpha1.VirtualMachine)
+	if err := c.vm.DeleteServer(vm.Name); err != nil {
+		klog.Errorf("Failed to delete the '%s' server: %v", vm.Name, err)
+	}
+}
+
+func (c *Controller) makePendingPhase(vm *v1alpha1.VirtualMachine) error {
+	vmCopy := vm.DeepCopy()
+	return c.updateStatus(vmCopy, v1alpha1.VirtualMachinePending, nil)
+}
+
+func (c *Controller) createServer(vm *v1alpha1.VirtualMachine) error {
+	vmCopy := vm.DeepCopy()
+	ok, _ := c.vm.IsServerExist(vm.Name)
+	if !ok {
+		req := &driver.CreateRequest{
+			Name:   vm.Name,
+			CPU:    vm.Spec.Resource.Cpu().Value(),
+			Memory: vm.Spec.Resource.Memory().Value(),
+		}
+		resp, err := c.vm.CreateServer(req)
+		if err != nil {
+			if err := c.updateStatus(vmCopy, v1alpha1.VirtualMachineFailed, err); err != nil {
+				return err
+			}
+			return err
+		}
+		vmCopy.Status.Server.ID = resp.ID
+
+		if err := c.appendServerStatus(vmCopy); err != nil {
+			return err
+		}
+
+		if err := c.updateStatus(vmCopy, v1alpha1.VirtualMachineActive, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Controller) appendServerStatus(vm *v1alpha1.VirtualMachine) error {
+	status, err := c.vm.GetServerStatus(vm.Name)
 	if err != nil {
 		return err
 	}
 
-	klog.Infof("Controller get %s/%s object: %s", namespace, name, string(data))
+	vm.Status.Server.Usage.CPU = status.CPUPercentage
+	vm.Status.Server.Usage.Memory = status.MemoryPercentage
+	vm.Status.Server.State = status.State
 	return nil
+}
+
+func (c *Controller) updateUsage(vm *v1alpha1.VirtualMachine) error {
+	vmCopy := vm.DeepCopy()
+	t := subtractTime(vmCopy.Status.LastUpdateTime.Time)
+	if t.Seconds() > periodSec {
+		if err := c.appendServerStatus(vmCopy); err != nil {
+			return err
+		}
+
+		if err := c.updateStatus(vmCopy, v1alpha1.VirtualMachineActive, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Controller) updateStatus(vm *v1alpha1.VirtualMachine, phase v1alpha1.VirtualMachinePhase, reason error) error {
+	vm.Status.Reason = ""
+	if reason != nil {
+		vm.Status.Reason = reason.Error()
+	}
+
+	vm.Status.Phase = phase
+	vm.Status.LastUpdateTime = metav1.NewTime(time.Now())
+	_, err := c.clientset.CloudnativeV1alpha1().VirtualMachines(vm.Namespace).Update(vm)
+	return err
+}
+
+func subtractTime(t time.Time) time.Duration {
+	now := time.Now()
+	then := now.Sub(t)
+	return then
 }

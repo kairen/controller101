@@ -33,28 +33,27 @@ type VirtualMachine struct {
 }
 
 type VirtualMachineSpec struct {
-	Action   string              `json:"action"`
 	Resource corev1.ResourceList `json:"resource"`
 }
 
 type VirtualMachinePhase string
 
 const (
-	VirtualMachineNone          VirtualMachinePhase = ""
-	VirtualMachinePending       VirtualMachinePhase = "Pending"
-	VirtualMachineSynchronizing VirtualMachinePhase = "Synchronizing"
-	VirtualMachineSynchronized  VirtualMachinePhase = "Synchronized"
-	VirtualMachineFailed        VirtualMachinePhase = "Failed"
-	VirtualMachineTerminating   VirtualMachinePhase = "Terminating"
-	VirtualMachineUnknown       VirtualMachinePhase = "Unknown"
+	VirtualMachineNone        VirtualMachinePhase = ""
+	VirtualMachinePending     VirtualMachinePhase = "Pending"
+	VirtualMachineActive      VirtualMachinePhase = "Active"
+	VirtualMachineFailed      VirtualMachinePhase = "Failed"
+	VirtualMachineTerminating VirtualMachinePhase = "Terminating"
+	VirtualMachineUnknown     VirtualMachinePhase = "Unknown"
 )
 
 type ResourceUsage struct {
-	CPU    int32 `json:"cpu"`
-	Memory int32 `json:"memory"`
+	CPU    float64 `json:"cpu"`
+	Memory float64 `json:"memory"`
 }
 
 type ServerStatus struct {
+	ID    string        `json:"id"`
 	State string        `json:"state"`
 	Usage ResourceUsage `json:"usage"`
 }

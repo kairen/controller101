@@ -18,10 +18,25 @@ package controller
 
 import (
 	"time"
+
+	"github.com/thoas/go-funk"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func subtractTime(t time.Time) time.Duration {
 	now := time.Now()
 	then := now.Sub(t)
 	return then
+}
+
+func addFinalizer(meta *metav1.ObjectMeta, finalizer string) {
+	if !funk.ContainsString(meta.Finalizers, finalizer) {
+		meta.Finalizers = append(meta.Finalizers, finalizer)
+	}
+}
+
+func removeFinalizer(meta *metav1.ObjectMeta, finalizer string) {
+	meta.Finalizers = funk.FilterString(meta.Finalizers, func(s string) bool {
+		return s != finalizer
+	})
 }

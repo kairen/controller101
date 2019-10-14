@@ -40,7 +40,7 @@ type VirtualMachinePhase string
 
 const (
 	VirtualMachineNone        VirtualMachinePhase = ""
-	VirtualMachinePending     VirtualMachinePhase = "Pending"
+	VirtualMachineCreating    VirtualMachinePhase = "Creating"
 	VirtualMachineActive      VirtualMachinePhase = "Active"
 	VirtualMachineFailed      VirtualMachinePhase = "Failed"
 	VirtualMachineTerminating VirtualMachinePhase = "Terminating"

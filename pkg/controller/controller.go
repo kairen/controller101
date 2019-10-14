@@ -37,8 +37,9 @@ import (
 )
 
 const (
-	resouceName = "VirtualMachine"
-	periodSec   = 20
+	resouceName   = "VirtualMachine"
+	periodSec     = 20
+	finalizerName = "finalizer.cloudnative.tw"
 )
 
 type Controller struct {
@@ -66,7 +67,7 @@ func New(clientset cloudnative.Interface, informer cloudnativeinformer.SharedInf
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueue(new)
 		},
-		DeleteFunc: controller.deleteObject,
+		// DeleteFunc: controller.deleteObject,
 	})
 	return controller
 }
@@ -156,15 +157,26 @@ func (c *Controller) syncHandler(key string) error {
 
 	switch vm.Status.Phase {
 	case v1alpha1.VirtualMachineNone:
-		if err := c.makePendingPhase(vm); err != nil {
+		if err := c.makeCreatingPhase(vm); err != nil {
 			return err
 		}
-	case v1alpha1.VirtualMachinePending, v1alpha1.VirtualMachineFailed:
+	case v1alpha1.VirtualMachineCreating, v1alpha1.VirtualMachineFailed:
 		if err := c.createServer(vm); err != nil {
 			return err
 		}
 	case v1alpha1.VirtualMachineActive:
+		if !vm.ObjectMeta.DeletionTimestamp.IsZero() {
+			if err := c.makeTerminatingPhase(vm); err != nil {
+				return err
+			}
+			return nil
+		}
+
 		if err := c.updateUsage(vm); err != nil {
+			return err
+		}
+	case v1alpha1.VirtualMachineTerminating:
+		if err := c.deleteServer(vm); err != nil {
 			return err
 		}
 	}
@@ -178,9 +190,14 @@ func (c *Controller) deleteObject(obj interface{}) {
 	}
 }
 
-func (c *Controller) makePendingPhase(vm *v1alpha1.VirtualMachine) error {
+func (c *Controller) makeCreatingPhase(vm *v1alpha1.VirtualMachine) error {
 	vmCopy := vm.DeepCopy()
-	return c.updateStatus(vmCopy, v1alpha1.VirtualMachinePending, nil)
+	return c.updateStatus(vmCopy, v1alpha1.VirtualMachineCreating, nil)
+}
+
+func (c *Controller) makeTerminatingPhase(vm *v1alpha1.VirtualMachine) error {
+	vmCopy := vm.DeepCopy()
+	return c.updateStatus(vmCopy, v1alpha1.VirtualMachineTerminating, nil)
 }
 
 func (c *Controller) createServer(vm *v1alpha1.VirtualMachine) error {
@@ -205,6 +222,7 @@ func (c *Controller) createServer(vm *v1alpha1.VirtualMachine) error {
 			return err
 		}
 
+		addFinalizer(&vmCopy.ObjectMeta, finalizerName)
 		if err := c.updateStatus(vmCopy, v1alpha1.VirtualMachineActive, nil); err != nil {
 			return err
 		}
@@ -249,4 +267,18 @@ func (c *Controller) updateStatus(vm *v1alpha1.VirtualMachine, phase v1alpha1.Vi
 	vm.Status.LastUpdateTime = metav1.NewTime(time.Now())
 	_, err := c.clientset.CloudnativeV1alpha1().VirtualMachines(vm.Namespace).Update(vm)
 	return err
+}
+
+func (c *Controller) deleteServer(vm *v1alpha1.VirtualMachine) error {
+	vmCopy := vm.DeepCopy()
+	if err := c.vm.DeleteServer(vmCopy.Name); err != nil {
+		// Requeuing object to workqueue for retrying
+		return err
+	}
+
+	removeFinalizer(&vmCopy.ObjectMeta, finalizerName)
+	if err := c.updateStatus(vmCopy, v1alpha1.VirtualMachineTerminating, nil); err != nil {
+		return err
+	}
+	return nil
 }

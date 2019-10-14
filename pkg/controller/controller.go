@@ -250,9 +250,3 @@ func (c *Controller) updateStatus(vm *v1alpha1.VirtualMachine, phase v1alpha1.Vi
 	_, err := c.clientset.CloudnativeV1alpha1().VirtualMachines(vm.Namespace).Update(vm)
 	return err
 }
-
-func subtractTime(t time.Time) time.Duration {
-	now := time.Now()
-	then := now.Sub(t)
-	return then
-}

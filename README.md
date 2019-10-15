@@ -38,3 +38,18 @@ I1015 02:16:08.083846   53517 controller.go:78] Waiting for the informer caches 
 I1015 02:16:08.185334   53517 controller.go:86] Started workers
 I1015 02:16:08.185379   53517 main.go:144] test1: leading
 ```
+
+## Deploy in the cluster
+Run the following command to deploy the controller:
+
+```sh
+$ minikube start --kubernetes-version=v1.15.4
+$ minikube docker-env
+$ kubectl -n kube-system create secret generic docker-certs \
+  --from-file=$HOME/.minikube/certs/ca.pem \
+  --from-file=$HOME/.minikube/certs/cert.pem \
+  --from-file=$HOME/.minikube/certs/key.pem
+
+# Modify envs in `deploy/deployment.yml` to reflect you need values:
+$ kubectl apply -f deploy/
+```

@@ -60,7 +60,7 @@ func parseFlags() {
 	flag.StringVarP(&driverName, "vm-driver", "", "", "Driver is one of: [fake docker].")
 	flag.BoolVarP(&leaderElect, "leader-elect", "", true, "Start a leader election client and gain leadership before executing the main loop. ")
 	flag.StringVar(&leaseLockName, "lease-lock-name", "controller101", "the lease lock resource name")
-	flag.StringVar(&leaseLockNamespace, "lease-lock-namespace", "", "the lease lock resource namespace")
+	flag.StringVar(&leaseLockNamespace, "lease-lock-namespace", os.Getenv("POD_NAMESPACE"), "the lease lock resource namespace")
 	flag.BoolVarP(&showVersion, "version", "", false, "Display the version.")
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	flag.Parse()

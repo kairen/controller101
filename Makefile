@@ -21,6 +21,10 @@ out/controller:
 	go build -ldflags="-s -w -X $(REPOPATH)/pkg/version.version=$(VERSION)" \
 	  -a -o $@ cmd/main.go
 
+.PHONY: build_image
+build_image:
+	docker build -t kairen/controller101:$(VERSION) .
+
 ##############
 # Generating #
 ##############

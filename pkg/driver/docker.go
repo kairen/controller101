@@ -54,7 +54,7 @@ func (d *DockerDriver) pullImage(name string) error {
 	}
 
 	imageFullName := fmt.Sprintf("%s/%s", repository, name)
-	if len(imageList) < 0 {
+	if len(imageList) == 0 {
 		_, err := d.client.ImagePull(context.Background(), imageFullName, types.ImagePullOptions{})
 		if err != nil {
 			return err
@@ -68,9 +68,7 @@ func (d *DockerDriver) CreateServer(req *CreateRequest) (*CreateReponse, error) 
 		return nil, err
 	}
 
-	config := &container.Config{
-		Image: imageName,
-	}
+	config := &container.Config{Image: imageName}
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
 			NanoCPUs: req.CPU,

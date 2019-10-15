@@ -119,36 +119,41 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	lock := &resourcelock.LeaseLock{
-		LeaseMeta: metav1.ObjectMeta{
-			Name:      leaseLockName,
-			Namespace: leaseLockNamespace,
-		},
-		Client: k8sclientset.CoordinationV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity: id,
-		},
+	if leaderElect {
+		lock := &resourcelock.LeaseLock{
+			LeaseMeta: metav1.ObjectMeta{
+				Name:      leaseLockName,
+				Namespace: leaseLockNamespace,
+			},
+			Client: k8sclientset.CoordinationV1(),
+			LockConfig: resourcelock.ResourceLockConfig{
+				Identity: id,
+			},
+		}
+		go leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+			Lock:            lock,
+			ReleaseOnCancel: true,
+			LeaseDuration:   60 * time.Second,
+			RenewDeadline:   15 * time.Second,
+			RetryPeriod:     5 * time.Second,
+			Callbacks: leaderelection.LeaderCallbacks{
+				OnStartedLeading: func(ctx context.Context) {
+					if err := controller.Run(ctx, threads); err != nil {
+						klog.Fatalf("Error to run the controller instance: %s.", err)
+					}
+					klog.Infof("%s: leading", id)
+				},
+				OnStoppedLeading: func() {
+					controller.Stop()
+					klog.Infof("%s: lost", id)
+				},
+			},
+		})
+	} else {
+		if err := controller.Run(ctx, threads); err != nil {
+			klog.Fatalf("Error to run the controller instance: %s.", err)
+		}
 	}
-
-	go leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
-		Lock:            lock,
-		ReleaseOnCancel: true,
-		LeaseDuration:   60 * time.Second,
-		RenewDeadline:   15 * time.Second,
-		RetryPeriod:     5 * time.Second,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				if err := controller.Run(ctx, threads); err != nil {
-					klog.Fatalf("Error to run the controller instance: %s.", err)
-				}
-				klog.Infof("%s: leading", id)
-			},
-			OnStoppedLeading: func() {
-				controller.Stop()
-				klog.Infof("%s: lost", id)
-			},
-		},
-	})
 
 	<-signalChan
 	cancel()

@@ -5,14 +5,18 @@ go 1.12
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
-	github.com/docker/docker v1.13.1
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
 	github.com/thoas/go-funk v0.4.0
+	gotest.tools/v3 v3.4.0 // indirect
 	k8s.io/api v0.0.0-20191005115622-2e41325d9e4b
 	k8s.io/apimachinery v0.0.0-20191005115455-e71eb83a557c
 	k8s.io/client-go v0.0.0-20191005115821-b1fd78950135
